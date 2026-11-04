@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Тренажёр — Школа России</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { height:100%; font-family:'Segoe UI',Arial,sans-serif; }
+  .screen { position:fixed; inset:0; overflow:hidden; }
+  .hidden { display:none !important; }
+
+  #splash { display:flex; align-items:flex-end; justify-content:center; }
+  .splash-bg { position:absolute; inset:0;
+    background:url('images/zagruzka.png') center/cover no-repeat;
+    filter:blur(20px) brightness(.9); transform:scale(1.2); }
+  .splash-img { position:absolute; inset:0;
+    background:url('images/zagruzka.png') center/contain no-repeat; }
+  .load-wrap { position:relative; text-align:center; padding-bottom:4vh; }
+  .bar { width:min(420px,70vw); height:16px; margin:0 auto;
+    border:3px solid #fff; border-radius:10px; background:rgba(0,0,0,.35); overflow:hidden;
+    box-shadow:0 0 12px rgba(0,0,0,.4); }
+  #bar-fill { height:100%; width:0%; border-radius:7px;
+    background:linear-gradient(90deg,#ffd54f,#ff8f00); transition:width .15s; }
+  #load-text { color:#fff; font-weight:bold; margin-top:10px; font-size:20px;
+    text-shadow:0 2px 4px rgba(0,0,0,.7), 0 0 8px rgba(0,0,0,.5); }
+
+  #namescreen { display:flex; align-items:flex-end; justify-content:center;
+    padding-bottom:52px;
+    background:linear-gradient(rgba(0,0,0,.05),rgba(0,0,0,.05)),
+      url('images/shkola.jpg') center/auto 108% no-repeat,
+      linear-gradient(180deg,#7ec8f7,#cfeaff); }
+  .name-card { background:rgba(255,249,205,.45); color:#4e342e; text-align:center;
+    padding:10px 16px; border-radius:14px; border:2px solid #f9a825; max-width:92vw; }
+  .name-card h2 { margin-bottom:4px; font-size:clamp(13px,1.8vw,16px); color:#5d4037; }
+  #name-input { width:min(220px,70vw); padding:7px 10px; font-size:clamp(14px,1.9vw,18px);
+    font-weight:bold; text-align:center; border-radius:10px;
+    border:2px solid #f9a825; background:#fff; color:#1a237e; outline:none; }
+  #name-input:focus { box-shadow:0 0 0 4px #ffd54f; }
+  #name-err { min-height:14px; margin-top:4px; color:#c62828;
+    font-size:clamp(11px,1.4vw,13px); font-weight:bold; }
+  #name-btn { margin-top:5px; padding:7px 20px; font-size:clamp(13px,1.8vw,16px); font-weight:bold;
+    color:#fff; background:linear-gradient(180deg,#ff9800,#f57c00);
+    border:2px solid #fff; border-radius:40px; cursor:pointer; box-shadow:0 3px 0 #b26a00; }
+  #name-btn:hover { filter:brightness(1.1); }
+  #name-btn:active { transform:translateY(3px); box-shadow:0 2px 0 #b26a00; }
+
+  #hall .hall-img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; }
+  .hall-bg { position:absolute; inset:0;
+    background:url('images/dveri.jpg') center/cover no-repeat;
+    filter:blur(20px) brightness(.9); transform:scale(1.2); }
+  .door-zone { position:absolute; border-radius:14px; cursor:pointer; background:transparent; border:none; padding:0; }
+  .door-zone:hover, .door-zone:active { background:rgba(255,255,255,.18);
+    box-shadow:0 0 0 4px #fff, 0 0 24px rgba(255,255,255,.8); }
+  #skip-btn { position:absolute; right:clamp(50px,3vw,320px); bottom:38px; z-index:5;
+    padding:7px 13px; font-size:clamp(13px,1.5vw,15px); font-weight:bold; cursor:pointer;
+    color:#fff; background:linear-gradient(180deg,#42a5f5,#1565c0);
+    border:3px solid #fff; border-radius:50px;
+    box-shadow:0 4px 0 #0d47a1, 0 6px 10px rgba(0,0,0,.35); }
+  #skip-btn:hover { filter:brightness(1.12); }
+  #skip-btn:active { transform:translateY(3px); box-shadow:0 1px 0 #0d47a1; }
+  #mute, .mute-btn { position:fixed; top:14px; right:24px; z-index:5; width:48px; height:48px;
+    font-size:22px; border-radius:50%; border:3px solid #fff; cursor:pointer;
+    background:rgba(0,0,0,.45); color:#fff; }
+
+  #subjects, #quarters, #topics { display:flex; flex-direction:column; align-items:center;
+    padding:4vh 16px; overflow-y:auto; background:linear-gradient(180deg,#7ec8f7,#cfeaff); }
+  #subj-title, #q-title, #t-title { color:#fff; font-size:34px; font-weight:bold; text-align:center;
+    text-shadow:0 2px 6px rgba(0,0,0,.45); margin-bottom:22px; }
+  #subj-grid, #q-grid, #t-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:14px; width:min(1000px,96vw); }
+
+  .subj-btn { padding:18px 12px; font-size:19px; font-weight:bold; color:#fff;
+    border:3px solid #fff; border-radius:18px; cursor:pointer;
+    box-shadow:0 5px 0 rgba(0,0,0,.25); text-shadow:0 1px 3px rgba(0,0,0,.4);
+    white-space:normal; overflow-wrap:anywhere; word-break:break-word; hyphens:auto; line-height:1.25; }
+
+  .subj-btn:hover { filter:brightness(1.12); }
+  .subj-btn:active { transform:translateY(3px); box-shadow:0 2px 0 rgba(0,0,0,.25); }
+  .flag-img { width:1.3em; height:0.9em; vertical-align:middle; border-radius:2px;
+    margin-right:6px; box-shadow:0 0 0 1px rgba(255,255,255,.7); }
+  #back-btn { margin-top:26px; padding:14px 34px; font-size:20px; font-weight:bold; cursor:pointer;
+    color:#fff; background:#3949ab; border:3px solid #fff; border-radius:40px; box-shadow:0 5px 0 #1a237e; }
+  #back-btn:hover { filter:brightness(1.15); }
+  #t-back { margin-top:26px; padding:14px 34px; font-size:20px; font-weight:bold; cursor:pointer;
+    color:#fff; background:#3949ab; border:3px solid #fff; border-radius:40px; box-shadow:0 5px 0 #1a237e; }
+  #t-back:hover { filter:brightness(1.15); }
+
+  #rules { display:flex; align-items:center; justify-content:center;
+    padding:10px; overflow-y:auto; background:linear-gradient(180deg,#7ec8f7,#cfeaff); }
+  .rules-card { background:rgba(255,249,205,.96); color:#4e342e;
+    padding:clamp(12px,2.5vh,24px) clamp(16px,2.5vw,28px);
+    border-radius:16px; border:3px solid #f9a825; width:min(620px,94vw); text-align:left; }
+  #rules-title { text-align:center; margin-bottom:10px; font-size:clamp(17px,2.6vw,22px); color:#5d4037; }
+  #rules-list { line-height:1.4; font-size:clamp(13px,1.8vw,16px); }
+  #rules-list p { margin-bottom:7px; }
+  #alfavit-img { display:block; margin:10px auto 0; max-width:min(340px,80%); max-height:30vh;
+    object-fit:contain; border:3px solid #fff; border-radius:12px; cursor:zoom-in;
+    box-shadow:0 5px 12px rgba(0,0,0,.22); }
+  #alfavit-hint { text-align:center; font-size:clamp(11px,1.6vw,13px); color:#8d6e63; margin-top:4px; }
+  #lightbox { position:fixed; inset:0; z-index:50; background:rgba(0,0,0,.85);
+    display:flex; align-items:center; justify-content:center; cursor:zoom-out; }
+  #lightbox img { max-width:96vw; max-height:96vh; border-radius:10px; }
+  .quiz-controls { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:10px; }
+  #rules-start, #rules-back { padding:9px 22px; font-size:clamp(13px,1.9vw,17px); font-weight:bold;
+    cursor:pointer; color:#fff; border:3px solid #fff; border-radius:40px; box-shadow:0 4px 0 rgba(0,0,0,.3); }
+  #rules-start { background:linear-gradient(180deg,#66bb6a,#2e7d32); }
+  #rules-back { background:#3949ab; box-shadow:0 4px 0 #1a237e; }
+  #rules-start:hover, #rules-back:hover { filter:brightness(1.15); }
+
+  #bye { display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(180deg,#7ec8f7,#cfeaff); }
+  .bye-card { background:rgba(255,249,205,.96); color:#4e342e; text-align:center;
+    padding:40px 50px; border-radius:20px; border:3px solid #ef5350; }
+  .bye-card h2 { margin-bottom:16px; color:#5d4037; }
+  .bye-card p { margin-bottom:24px; }
+  #bye-back-btn { padding:14px 34px; font-size:20px; font-weight:bold; cursor:pointer;
+    color:#fff; background:#3949ab; border:3px solid #fff; border-radius:40px; box-shadow:0 5px 0 #1a237e; }
+  #bye-back-btn:hover { filter:brightness(1.15); }
+  #close-tab-btn { margin-top:14px; padding:12px 30px; font-size:18px; font-weight:bold; cursor:pointer;
+    color:#fff; background:linear-gradient(180deg,#ef5350,#c62828);
+    border:3px solid #fff; border-radius:40px; box-shadow:0 5px 0 #8e0000; }
+  #close-tab-btn:hover { filter:brightness(1.12); }
+  #close-tab-btn:active { transform:translateY(3px); box-shadow:0 2px 0 #8e0000; }
+
+  #placeholder { display:flex; align-items:center; justify-content:center; }
+  .card { background:rgba(255,249,205,.96); color:#4e342e; text-align:center;
+    padding:40px 50px; border-radius:20px; border:3px solid #66d37a; }
+  .card h2 { margin-bottom:22px; color:#5d4037; }
+  #back-btn2 { padding:14px 34px; font-size:20px; font-weight:bold; cursor:pointer;
+    color:#fff; background:#3949ab; border:3px solid #fff; border-radius:40px; }
+  #back-btn2:hover { filter:brightness(1.15); }
+
+  #quiz { display:flex; align-items:center; justify-content:center;
+    padding:16px; overflow-y:auto; background:linear-gradient(180deg,#7ec8f7,#cfeaff); }
+  .quiz-card { background:rgba(255,249,205,.96); color:#4e342e; text-align:center;
+    padding:clamp(20px,4vh,40px) clamp(20px,4vw,50px);
+    border-radius:20px; border:3px solid #f9a825; width:min(640px,94vw); }
+  #quiz-progress { font-size:clamp(14px,2vw,17px); color:#b26a00; font-weight:bold;
+    margin-bottom:14px; letter-spacing:1px; }
+  #quiz-question { font-size:clamp(20px,3.4vw,28px); font-weight:bold; color:#5d4037;
+    margin-bottom:clamp(14px,3vh,24px); line-height:1.3; }
+  #quiz-answers { display:grid; grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:12px; width:100%; }
+  @media (max-width:520px) { #quiz-answers { grid-template-columns:minmax(0,1fr); } }
+  .ans-btn { min-height:58px; white-space:normal; display:flex; align-items:center; justify-content:center; text-align:center; overflow-wrap:break-word; word-break:normal; line-height:1.25;
+    padding:clamp(12px,2.2vh,18px) 12px; font-size:clamp(15px,2.3vw,20px);
+    font-weight:bold; color:#fff; cursor:pointer; border:3px solid #fff; border-radius:14px;
+    background:linear-gradient(180deg,#26c6da,#00838f);
+    box-shadow:0 4px 0 rgba(0,0,0,.3); text-shadow:0 1px 3px rgba(0,0,0,.4); transition:transform .1s; }
+  .ans-btn:hover { filter:brightness(1.12); }
+  .ans-btn:active { transform:translateY(3px); box-shadow:0 1px 0 rgba(0,0,0,.3); }
+  .ans-btn.good { background:linear-gradient(180deg,#66bb6a,#2e7d32); }
+  .ans-btn.bad  { background:linear-gradient(180deg,#ef5350,#b71c1c); animation:shake .35s; }
+  .ans-btn.dim  { opacity:.55; }
+  .ans-btn[disabled] { cursor:default; }
+  @keyframes shake { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-6px);} 75%{transform:translateX(6px);} }
+  #quiz-feedback { min-height:34px; margin-top:16px; font-size:clamp(16px,2.4vw,20px); font-weight:bold; color:#2e7d32; }
+  .tip { display:block; font-weight:normal; font-size:0.85em; margin-top:6px; color:#7a5c00; }
+  #next-btn { margin-top:14px; padding:12px 34px; font-size:clamp(16px,2.4vw,20px); font-weight:bold;
+    color:#fff; background:linear-gradient(180deg,#ffa726,#ef6c00);
+    border:3px solid #fff; border-radius:40px; cursor:pointer; box-shadow:0 5px 0 #b26a00; }
+  #next-btn:hover { filter:brightness(1.12); }
+  #next-btn:active { transform:translateY(3px); box-shadow:0 2px 0 #b26a00; }
+  #quiz-result { display:none; font-size:clamp(18px,2.6vw,22px); margin:14px 0 20px; line-height:1.5; color:#5d4037; }
+  #quiz-again, #quiz-exit { padding:12px 28px; font-size:clamp(15px,2.2vw,19px); font-weight:bold;
+    cursor:pointer; color:#fff; border:3px solid #fff; border-radius:40px; box-shadow:0 5px 0 rgba(0,0,0,.3); }
+  #quiz-again { background:linear-gradient(180deg,#66bb6a,#2e7d32); }
+  #quiz-exit { background:#3949ab; box-shadow:0 5px 0 #1a237e; }
+  #quiz-again:hover, #quiz-exit:hover { filter:brightness(1.15); }
+</style>
+
+<style>
+/* Длинные правила: включаем прокрутку */
+#rules, .rules-screen { overflow-y: auto; max-height: 100vh; }
+.rules-card { max-height: calc(100vh - 24px); overflow-y: auto; }
+.rules-list, #rules-list, .rule-box, .rules-box { max-height: 58vh; overflow-y: auto; }
+.rules-card::-webkit-scrollbar { width: 8px; }
+.rules-card::-webkit-scrollbar-thumb { background: #b8c4d8; border-radius: 8px; }
+</style>
+
+<style>
+/* Кнопка помощи и окно правила */
+#help-btn { margin-top:14px; padding:10px 26px; font-size:clamp(15px,2.3vw,19px); font-weight:bold;
+  color:#4e342e; background:linear-gradient(180deg,#ffe082,#ffb300);
+  border:3px solid #fff; border-radius:40px; cursor:pointer; box-shadow:0 4px 0 #b26a00; }
+#help-btn:hover { filter:brightness(1.12); }
+#help-btn:active { transform:translateY(3px); box-shadow:0 1px 0 #b26a00; }
+#help-btn.hidden { display:none; }
+#help-modal { position:fixed; inset:0; z-index:60; background:rgba(0,0,0,.55);
+  display:flex; align-items:center; justify-content:center; padding:16px; }
+#help-modal.hidden { display:none; }
+.help-card { background:rgba(255,249,205,.98); color:#4e342e; max-width:560px; width:100%;
+  padding:26px 30px; border-radius:18px; border:3px solid #f9a825; text-align:left;
+  max-height:80vh; overflow-y:auto; }
+.help-card h3 { margin-bottom:10px; color:#5d4037; font-size:clamp(17px,2.6vw,22px); }
+#help-text { line-height:1.45; font-size:clamp(14px,2vw,17px); white-space:pre-line; }
+.help-controls { text-align:center; margin-top:16px; }
+#help-ok { padding:9px 26px; font-size:clamp(14px,2vw,17px); font-weight:bold; cursor:pointer;
+  color:#fff; background:linear-gradient(180deg,#66bb6a,#2e7d32);
+  border:3px solid #fff; border-radius:40px; box-shadow:0 4px 0 rgba(0,0,0,.3); }
+#help-ok:hover { filter:brightness(1.15); }
+</style>
+</head>
+<body>
+
+<div id="splash" class="screen">
+  <div class="splash-bg"></div>
+  <div class="splash-img"></div>
+  <div class="load-wrap">
+    <div class="bar"><div id="bar-fill"></div></div>
+    <div id="load-text">Загрузка…</div>
+  </div>
+</div>
+
+<div id="namescreen" class="screen hidden">
+  <div class="name-card">
+    <h2>👋 Как тебя зовут?</h2>
+    <input id="name-input" type="text" maxlength="20" autocomplete="off" placeholder="Введи имя">
+    <div id="name-err"></div>
+    <button id="name-btn">🚸 Войти в школу</button>
+  </div>
+</div>
+
+<div id="hall" class="screen hidden">
+  <div class="hall-bg"></div>
+  <img class="hall-img" src="images/dveri.jpg" alt="Выбери свой класс">
+  <button id="skip-btn">🚶 Прогулять школу</button>
+  <button id="mute">🔊</button>
+</div>
+
+<div id="subjects" class="screen hidden">
+  <button class="mute-btn">🔊</button>
+  <h2 id="subj-title">Класс</h2>
+  <div id="subj-grid"></div>
+  <button id="back-btn">🏠 Назад к дверям</button>
+</div>
+
+<div id="quarters" class="screen hidden">
+  <button class="mute-btn">🔊</button>
+  <h2 id="q-title">Предмет</h2>
+  <div id="q-grid"></div>
+  <button id="back-btn">← Назад к предметам</button>
+</div>
+
+<div id="topics" class="screen hidden">
+  <button class="mute-btn">🔊</button>
+  <h2 id="t-title">Тема</h2>
+  <div id="t-grid"></div>
+  <button id="t-back">← Назад</button>
+</div>
+
+<div id="rules" class="screen hidden">
+  <div class="rules-card">
+    <h2 id="rules-title">📖 Правила</h2>
+    <div id="rules-list"></div>
+    <img id="alfavit-img" class="hidden" src="images/alfavit.jpg" alt="Русский алфавит">
+    <div id="alfavit-hint" class="hidden">👆 Нажми на картинку, чтобы рассмотреть буквы крупно</div>
+    <div class="quiz-controls">
+      <button id="rules-start">🚀 Начать игру</button>
+      <button id="rules-back">← Назад</button>
+    </div>
+  </div>
+</div>
+
+<div id="quiz" class="screen hidden">
+  <div class="quiz-card">
+    <div id="quiz-progress">Вопрос 1 из 10</div>
+    <h2 id="quiz-question">Вопрос</h2>
+    <div id="quiz-answers"></div>
+    <button id="help-btn">💡 Помощь</button>
+    <div id="quiz-feedback"></div>
+    <button id="next-btn" class="hidden">Дальше →</button>
+    <div id="quiz-result"></div>
+    <div class="quiz-controls">
+      <button id="quiz-again" class="hidden">🔄 Играть снова</button>
+      <button id="quiz-exit">← Выйти из тренажёра</button>
+    </div>
+  </div>
+</div>
+
+<div id="bye" class="screen hidden">
+  <div class="bye-card">
+    <h2>🚶‍♂️ Школа прогуляна!</h2>
+    <p>Знания подождут до завтра. Можно закрыть вкладку.</p>
+    <button id="bye-back-btn">👋 Вернуться в школу</button>
+    <button id="close-tab-btn">✖ Закрыть вкладку</button>
+  </div>
+</div>
+
+<div id="placeholder" class="screen hidden">
+  <button class="mute-btn">🔊</button>
+  <div class="card">
+    <h2 id="ph-text">🚧 Скоро появится тренажёр</h2>
+    <button id="back-btn2">← Назад</button>
+  </div>
+</div>
+
+<div id="lightbox" class="hidden">
+  <img src="images/alfavit.jpg" alt="Русский алфавит крупно">
+</div>
+
+<audio id="music" src="sounds/uchat.mp3" loop preload="auto"></audio>
+
+<div id="help-modal" class="hidden">
+  <div class="help-card">
+    <h3>📖 Правило</h3>
+    <div id="help-text"></div>
+    <div class="help-controls"><button id="help-ok">Понятно!</button></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var splash = document.getElementById('splash');
+  var barFill = document.getElementById('bar-fill');
+  var loadText = document.getElementById('load-text');
+
+  var namescreen = document.getElementById('namescreen');
+  var nameInput = document.getElementById('name-input');
+  var nameBtn = document.getElementById('name-btn');
+  var nameErr = document.getElementById('name-err');
+
+  var hall = document.getElementById('hall');
+  var muteBtn = document.getElementById('mute');
+  var muteBtns = Array.prototype.slice.call(document.querySelectorAll('#mute, .mute-btn'));
+  function syncMuteIcons(icon) {
+    muteBtns.forEach(function (b) { b.textContent = icon; });
+  }
+  var skipBtn = document.getElementById('skip-btn');
+
+  var subjects = document.getElementById('subjects');
+  var subjTitle = document.getElementById('subj-title');
+  var subjGrid = document.getElementById('subj-grid');
+
+  var quarters = document.getElementById('quarters');
+  var qTitle = document.getElementById('q-title');
+  var qGrid = document.getElementById('q-grid');
+
+  var backBtns = document.querySelectorAll('#back-btn');
+
+  var rules = document.getElementById('rules');
+  var rulesTitle = document.getElementById('rules-title');
+  var rulesList = document.getElementById('rules-list');
+  var rulesStart = document.getElementById('rules-start');
+  var rulesBack = document.getElementById('rules-back');
+  var alfavitImg = document.getElementById('alfavit-img');
+  var alfavitHint = document.getElementById('alfavit-hint');
+  var lightbox = document.getElementById('lightbox');
+
+  var bye = document.getElementById('bye');
+  var byeBackBtn = document.getElementById('bye-back-btn');
+  var closeTabBtn = document.getElementById('close-tab-btn');
+
+  var placeholder = document.getElementById('placeholder');
+  var phText = document.getElementById('ph-text');
+  var backBtn2 = document.getElementById('back-btn2');
+
+  var quiz = document.getElementById('quiz');
+  var quizProgress = document.getElementById('quiz-progress');
+  var quizQuestion = document.getElementById('quiz-question');
+  var quizAnswers = document.getElementById('quiz-answers');
+  var quizFeedback = document.getElementById('quiz-feedback');
+  var nextBtn = document.getElementById('next-btn');
+  var quizResult = document.getElementById('quiz-result');
+  var quizAgain = document.getElementById('quiz-again');
+  var quizExit = document.getElementById('quiz-exit');
+
+  var helpBtn = document.getElementById('help-btn');
+  var helpModal = document.getElementById('help-modal');
+  var helpText = document.getElementById('help-text');
+  var helpOk = document.getElementById('help-ok');
+  helpBtn.addEventListener('click', function () {
+    var item = GAME[qNum];
+    var h = '';
+    if (lastTopic && lastTopic.rules && lastTopic.rules.length) {
+      h += '<b>📖 Правило темы:</b>';
+      lastTopic.rules.forEach(function (r) { h += '<p style="margin:6px 0">' + r + '</p>'; });
+      h += '<hr style="border:none; border-top:2px dashed #f9a825; margin:10px 0">';
+    }
+    h += '<b style="color:#b26a00">💡 К этому вопросу:</b> ' + ((item && item.t) ? item.t : 'Прочитай внимательно вопрос и вспомни правило этой темы.');
+    helpText.innerHTML = h;
+    helpModal.classList.remove('hidden');
+  });
+  function closeHelp() { helpModal.classList.add('hidden'); }
+  helpOk.addEventListener('click', closeHelp);
+  helpModal.addEventListener('click', function (e) { if (e.target === helpModal) closeHelp(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeHelp(); });
+
+
+  var music = document.getElementById('music');
+music.volume = 0.3;
+  var DEFAULT_TRACK = 'sounds/uchat.mp3';
+  function setTrack(src) {
+    if (music.src.slice(-src.length) !== src) music.src = src;
+    music.volume = (src === DEFAULT_TRACK) ? 0.3 : 0.8;
+  }
+  var fadeIv = 0;
+  function fadeOutMusic() {
+    if (!playing) return;
+    clearInterval(fadeIv);
+    var v = music.volume;
+    fadeIv = setInterval(function () {
+      v -= 0.08;
+      if (v <= 0) {
+        clearInterval(fadeIv);
+        music.pause();
+        playing = false;
+        music.volume = (music.src.slice(-DEFAULT_TRACK.length) === DEFAULT_TRACK) ? 0.3 : 0.8;
+      } else {
+        music.volume = v;
+      }
+    }, 80);
+  }
+  function startMusic() {
+    clearInterval(fadeIv);
+    music.play().then(function () {
+      playing = true;
+      syncMuteIcons('🔊');
+    }).catch(function () {
+      playing = false;
+      syncMuteIcons('🔇');
+    });
+  }
+  music.addEventListener('error', function () {
+    if (music.src.slice(-DEFAULT_TRACK.length) !== DEFAULT_TRACK) {
+      setTrack(DEFAULT_TRACK);
+      if (!mutedByUser) startMusic();
+    }
+  });
+  var progul = new Audio('sounds/progul.mp3');
+  var p_otvet = new Audio('sounds/p_otvet.mp3');
+  p_otvet.volume = 0.9;
+  var pobeda = new Audio('sounds/pobeda_10.mp3');
+  pobeda.volume = 0.5;
+  var odhibka = new Audio('sounds/odhibka.mp3');
+  odhibka.volume = 0.9;
+  var neud = new Audio('sounds/neverno.mp3');
+  neud.volume = 0.9;
+  progul.loop = true;
+  progul.volume = 0.8;
+  var playing = false;
+  var mutedByUser = false;
+  var studentName = '';
+
+  var savedName = '';
+  try { savedName = localStorage.getItem('tutor_name') || ''; } catch (e) {}
+
+  /* ---------- ЭКРАН 1: анимация загрузки ---------- */
+  var progress = 0;
+  var loader = setInterval(function () {
+    progress += 4 + Math.floor(Math.random() * 8);
+    if (progress >= 100) {
+      progress = 100;
+      clearInterval(loader);
+      loadText.textContent = 'Готово!';
+      setTimeout(function () {
+        splash.classList.add('hidden');
+        namescreen.classList.remove('hidden');
+        nameInput.value = savedName;
+        nameErr.textContent = '';
+        setTimeout(function () { nameInput.focus(); }, 100);
+      }, 500);
+    }
+    barFill.style.width = progress + '%';
+  }, 130);
+
+  /* ---------- ЭКРАН 2: имя ученика ---------- */
+  function enterSchool() {
+    mutedByUser = false;
+    var nm = nameInput.value.trim();
+    if (!nm) {
+      nameErr.textContent = 'Сначала напиши своё имя 🙂';
+      return;
+    }
+    nm = nm.charAt(0).toUpperCase() + nm.slice(1).toLowerCase();
+    studentName = nm;
+    try { localStorage.setItem('tutor_name', nm); } catch (e) {}
+    namescreen.classList.add('hidden');
+    hall.classList.remove('hidden');
+    layoutZones();
+    startMusic();
+  }
+  nameBtn.addEventListener('click', enterSchool);
+  nameInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') enterSchool();
+  });
+
+  /* ---------- Звук ---------- */
+  muteBtns.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      if (playing) {
+        music.pause();
+        playing = false;
+        mutedByUser = true;
+        syncMuteIcons('🔇');
+      } else {
+        startMusic();
+      }
+    });
+  });
+
+  /* ---------- Прогулять школу ---------- */
+  skipBtn.addEventListener('click', function () {
+    music.pause();
+    progul.pause();
+    if (playing) progul.play().catch(function () {});
+    playing = false;
+    hall.classList.add('hidden');
+    subjects.classList.add('hidden');
+    quarters.classList.add('hidden');
+    bye.classList.remove('hidden');
+  });
+  byeBackBtn.addEventListener('click', function () {
+    progul.pause();
+    progul.currentTime = 0;
+    bye.classList.add('hidden');
+    hall.classList.remove('hidden');
+    layoutZones();
+    setTrack(DEFAULT_TRACK);
+    if (!mutedByUser) startMusic();
+  });
+
+  closeTabBtn.addEventListener('click', function () {
+    window.close();
+  });
+
+  /* ---------- Кликабельные зоны дверей (картинка 1536x1152) ---------- */
+  var IMG_W = 1536, IMG_H = 1156;
+  var ZONES = [
+    {cls:1, l:0.100, t:0.141, w:0.169, h:0.262},
+    {cls:2, l:0.421, t:0.141, w:0.164, h:0.262},
+    {cls:3, l:0.739, t:0.141, w:0.167, h:0.262},
+    {cls:4, l:0.100, t:0.416, w:0.169, h:0.271},
+    {cls:5, l:0.421, t:0.416, w:0.164, h:0.271},
+    {cls:6, l:0.739, t:0.416, w:0.167, h:0.271},
+    {cls:7, l:0.100, t:0.702, w:0.169, h:0.261},
+    {cls:8, l:0.421, t:0.702, w:0.164, h:0.261},
+    {cls:9, l:0.739, t:0.702, w:0.167, h:0.261}
+  ];
+  var zoneEls = [];
+  ZONES.forEach(function (z) {
+    var b = document.createElement('button');
+    b.className = 'door-zone';
+    b.title = z.cls + ' класс';
+    b.addEventListener('click', function () { openSubjects(z.cls); });
+    hall.appendChild(b);
+    zoneEls.push(b);
+  });
+  function layoutZones() {
+    var vw = hall.clientWidth, vh = hall.clientHeight;
+    var s = Math.min(vw / IMG_W, vh / IMG_H);
+    var dw = IMG_W * s, dh = IMG_H * s;
+    var ox = (vw - dw) / 2, oy = (vh - dh) / 2;
+    zoneEls.forEach(function (el, i) {
+      var z = ZONES[i];
+      el.style.left   = (ox + z.l * dw) + 'px';
+      el.style.top    = (oy + z.t * dh) + 'px';
+      el.style.width  = (z.w * dw) + 'px';
+      el.style.height = (z.h * dh) + 'px';
+    });
+  }
+  window.addEventListener('resize', layoutZones);
+
+  /* ---------- ПРЕДМЕТЫ ПО КЛАССАМ ---------- */
+  var COLORS = [
+    'linear-gradient(180deg,#ef5350,#c62828)',
+    'linear-gradient(180deg,#ffa726,#e65100)',
+    'linear-gradient(180deg,#ffee58,#f9a825)',
+    'linear-gradient(180deg,#66bb6a,#2e7d32)',
+    'linear-gradient(180deg,#26c6da,#00838f)',
+    'linear-gradient(180deg,#42a5f5,#1565c0)',
+    'linear-gradient(180deg,#7e57c2,#4527a0)',
+    'linear-gradient(180deg,#ec407a,#ad1457)'
+  ];
+  var SUBJECTS = {
+    1: ['📝 Русский язык','🔢 Математика','📖 Литература','🌍 Окружающий мир'],
+    2: ['📝 Русский язык','🔢 Математика','📖 Литература','🌍 Окружающий мир','Английский язык'],
+    3: ['📝 Русский язык','🔢 Математика','📖 Литература','🌍 Окружающий мир','Английский язык'],
+    4: ['📝 Русский язык','🔢 Математика','📖 Литература','🌍 Окружающий мир','Английский язык'],
+    5: ['📝 Русский язык','📖 Литература','🔢 Математика','Английский язык','🏛️ История','🗺️ География','🌱 Биология'],
+    6: ['📝 Русский язык','📖 Литература','🔢 Математика','Английский язык','🏛️ История','🗺️ География','🌱 Биология'],
+    7: ['📝 Русский язык','📖 Литература','➗ Алгебра','📐 Геометрия','🧲 Физика','Английский язык','🏛️ История','🗺️ География','🌱 Биология','💻 Информатика'],
+    8: ['📝 Русский язык','📖 Литература','➗ Алгебра','📐 Геометрия','🧲 Физика','🧪 Химия','Английский язык','🏛️ История','🗺️ География','🌱 Биология'],
+    9: ['📝 Русский язык','📖 Литература','➗ Алгебра','📐 Геометрия','🧲 Физика','🧪 Химия','Английский язык','🏛️ История','🗺️ География','🌱 Биология']
+  };
+  var QUARTERS = ['1 четверть','2 четверть','3 четверть','4 четверть'];
+  var QCOLORS = [
+    'linear-gradient(180deg,#66bb6a,#2e7d32)',
+    'linear-gradient(180deg,#ffee58,#f9a825)',
+    'linear-gradient(180deg,#42a5f5,#1565c0)',
+    'linear-gradient(180deg,#7e57c2,#4527a0)'
+  ];
+  var curCls = 1, curSubject = '';
+
+  function iconFor(name) {
+    return name === 'Английский язык'
+      ? '<img src="images/gb.png" class="flag-img" alt="Флаг">'
+      : '';
+  }
+
+  function applyClassBg(cls) {
+    var bg = 'linear-gradient(rgba(0,0,0,.28),rgba(0,0,0,.28)), ' +
+      "url('images/f" + cls + "k.jpg') center/cover no-repeat, " +
+      'linear-gradient(180deg,#7ec8f7,#cfeaff)';
+    ['subjects','quarters','topics','rules','quiz','placeholder'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.style.background = bg;
+    });
+  }
+
+  function openSubjects(cls) {
+    setTrack('sounds/klass' + cls + '.mp3');
+    applyClassBg(cls);
+    if (!mutedByUser) startMusic();
+    curCls = cls;
+    loadClassData(cls);
+    subjTitle.textContent = '🎒 ' + cls + ' класс — выбери предмет' + (studentName ? ', ' + studentName : '');
+    subjGrid.innerHTML = '';
+    SUBJECTS[cls].forEach(function (name, i) {
+      var b = document.createElement('button');
+      b.className = 'subj-btn';
+      b.innerHTML = iconFor(name) + name;
+      b.style.background = COLORS[i % COLORS.length];
+      b.addEventListener('click', function () { openQuarters(name); });
+      subjGrid.appendChild(b);
+    });
+    hall.classList.add('hidden');
+    quarters.classList.add('hidden');
+    subjects.classList.remove('hidden');
+  }
+
+  function openQuarters(name) {
+    curSubject = name;
+    qTitle.innerHTML = iconFor(name) + name + ' — ' + curCls + ' класс';
+    qGrid.innerHTML = '';
+    QUARTERS.forEach(function (q, i) {
+      var b = document.createElement('button');
+      b.className = 'subj-btn';
+      b.textContent = q;
+      b.style.background = QCOLORS[i];
+      b.addEventListener('click', function () {
+        var key = subjKey(curSubject);
+        function go() {
+          var store = dataFor(curCls, key);
+          if (store && store[i + 1]) { openTopics(i); return; }
+          phText.textContent = '🚧 «' + curSubject + '» — ' + curCls + ' класс, ' + QUARTERS[i] + ': скоро появится тренажёр';
+          quarters.classList.add('hidden');
+          placeholder.classList.remove('hidden');
+        }
+        if (EXT_STATE[curCls] && EXT_STATE[curCls][key] === false) { setTimeout(go, 250); } else { go(); }
+      });
+      qGrid.appendChild(b);
+    });
+    subjects.classList.add('hidden');
+    placeholder.classList.add('hidden');
+    quarters.classList.remove('hidden');
+  }
+
+  
+  /* ---------- ВЫБОР ТЕМЫ И ЗАКРЫТИЕ ВКЛАДКИ ---------- */
+  var topics = document.getElementById('topics');
+  var tTitle = document.getElementById('t-title');
+  var tGrid = document.getElementById('t-grid');
+  var tBack = document.getElementById('t-back');
+  var lastTopic = null;
+
+  function subjKey(name) {
+    if (name.indexOf('Русский') >= 0) return 'rus';
+    if (name.indexOf('Математ') >= 0) return 'mat';
+    if (name.indexOf('Литерат') >= 0) return 'lit';
+    if (name.indexOf('Окружающ') >= 0) return 'okr';
+    if (name.indexOf('Алгебра') >= 0) return 'alg';
+    if (name.indexOf('Геометр') >= 0) return 'geom';
+    if (name.indexOf('Физика') >= 0) return 'phy';
+    if (name.indexOf('Английск') >= 0) return 'eng';
+    if (name.indexOf('Истори') >= 0) return 'hist';
+    if (name.indexOf('Географи') >= 0) return 'geo';
+    if (name.indexOf('Биолог') >= 0) return 'bio';
+    if (name.indexOf('Информ') >= 0) return 'inf';
+    if (name.indexOf('Хими') >= 0) return 'chem';
+    return '';
+  }
+
+  var TIP_VC = 'Гласные можно пропеть голосом, а согласную нельзя — губы и язык мешают воздуху';
+  var TIP_SYL = 'Считай по гласным: сколько гласных — столько слогов. Хлопай на каждый!';
+  var TIP_ALF = 'Пропой алфавит про себя от А до нужной буквы — соседняя буква сразу найдётся';
+  var TIP_MISS = 'Произнеси слово медленно — услышится, какая буква не хватает';
+
+    /* ---------- ДАННЫЕ УБРАНЫ: все классы читают data/<класс>/<предмет>.js ---------- */
+  var TOPICS = null, T7RAW = null, T7 = null;
+
+  function shuffle(x) {
+    for (var i = x.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = x[i]; x[i] = x[j]; x[j] = t;
+    }
+    return x;
+  }
+
+  var TOPICCOLORS = [
+    'linear-gradient(180deg,#66bb6a,#2e7d32)',
+    'linear-gradient(180deg,#ffa726,#ef6c00)',
+    'linear-gradient(180deg,#42a5f5,#1565c0)',
+    'linear-gradient(180deg,#7e57c2,#4527a0)',
+    'linear-gradient(180deg,#ec407a,#ad1457)',
+    'linear-gradient(180deg,#26c6da,#00838f)'
+  ];
+
+  /* ---------- УНИВЕРСАЛЬНАЯ ЗАГРУЗКА ДОБАВОК data/<класс>/<предмет>.js ---------- */
+  var DATA_EXT = {};
+  var EXT_STATE = {};
+  function normalizeTopics(raw) {
+    var out = {};
+    var isArray = Object.prototype.toString.call(raw) === '[object Array]';
+    Object.keys(raw).forEach(function (qn) {
+      var key = isArray ? String(Number(qn) + 1) : qn;
+      out[key] = raw[qn].map(function (tp) {
+        var list = (tp.qs !== undefined) ? tp.qs : tp.pool;
+        var rulesArr = (tp.rules !== undefined) ? tp.rules : tp.r;
+        var qs = list.map(function (it) {
+          var right = (it.c !== undefined) ? it.a[it.c] : it.a[0];
+          var opts = shuffle([right].concat(it.a.filter(function (x) { return x !== right; })));
+          return { q: it.q, a: opts, c: opts.indexOf(right), t: it.t || it.h || '' };
+        });
+        return { t: tp.t, rules: rulesArr, pool: (function (arr) { return function () { return arr.slice(); }; })(qs) };
+      });
+    });
+    return out;
+  }
+window.__TUTOR_ADD__ = null;
+  function loadClassData(cls) {
+    if (EXT_STATE[cls]) return;
+    EXT_STATE[cls] = {};
+    SUBJECTS[cls].forEach(function (name) {
+      var key = subjKey(name);
+      if (!key || EXT_STATE[cls][key]) return;
+      EXT_STATE[cls][key] = false;
+      var s = document.createElement('script');
+      s.src = 'data/' + cls + '/' + key + '.js';
+      s.onload = function () {
+        var add = window.__TUTOR_ADD__, val = null;
+        if (add) {
+          if (add[key]) { val = add[key]; }
+          else {
+            var ks = Object.keys(add);
+            if (ks.length && ks.every(function (k) { return add[k] instanceof Array; })) val = add;
+          }
+        }
+        if (val) {
+          DATA_EXT[cls] = DATA_EXT[cls] || {};
+          DATA_EXT[cls][key] = normalizeTopics(val);
+        }
+        window.__TUTOR_ADD__ = null;
+        EXT_STATE[cls][key] = true;
+      };
+      s.onerror = function () { EXT_STATE[cls][key] = true; };
+      document.head.appendChild(s);
+    });
+  }
+  function dataFor(cls, key) {
+    var st = (cls === 1 && TOPICS) ? TOPICS : (cls === 7 && T7) ? T7 : null;
+    var base = (st && st[key]) ? st[key] : null;
+    var ext = (DATA_EXT[cls] && DATA_EXT[cls][key]) || null;
+    if (!base && !ext) return null;
+    if (!base) return ext;
+    if (!ext) return base;
+    var out = {}, qn;
+    for (qn in base) out[qn] = base[qn];
+    for (qn in ext) { var add = (ext[qn] || []).filter(function (t) { return !(out[qn] || []).some(function (b) { return b.t === t.t; }); }); out[qn] = (out[qn] || []).concat(add); }
+    return out;
+  }
+
+  /* ---------- ЭКРАН ТЕМ ---------- */
+  function openTopics(qi) {
+    var key = subjKey(curSubject);
+    var store = dataFor(curCls, key);
+    var list = store ? store[qi + 1] : undefined;
+    if (!list) return;
+    tTitle.textContent = '🎯 ' + curSubject + ' — ' + QUARTERS[qi] + ': выбери тему';
+    tGrid.innerHTML = '';
+    list.forEach(function (topic, i2) {
+      var b = document.createElement('button');
+      b.className = 'subj-btn';
+      b.textContent = topic.t;
+      b.style.background = TOPICCOLORS[i2 % TOPICCOLORS.length];
+      b.addEventListener('click', function () { openRules(topic); });
+      tGrid.appendChild(b);
+    });
+    quarters.classList.add('hidden');
+    rules.classList.add('hidden');
+    quiz.classList.add('hidden');
+    topics.classList.remove('hidden');
+  }
+
+  tBack.addEventListener('click', function () {
+    topics.classList.add('hidden');
+    quarters.classList.remove('hidden');
+  });
+
+  /* ---------- ЭКРАН ПРАВИЛ (по выбранной теме) ---------- */
+  function openRules(topic) {
+    fadeOutMusic();
+    lastTopic = topic;
+    lightbox.classList.add('hidden');
+    rulesTitle.textContent = '📖 ' + topic.t;
+    rulesList.innerHTML = '';
+    topic.rules.forEach(function (r) {
+      var p = document.createElement('p');
+      p.textContent = r;
+      rulesList.appendChild(p);
+    });
+    var showAlfavit = !!topic.showAlfavit;
+    alfavitImg.classList.toggle('hidden', !showAlfavit);
+    alfavitHint.classList.toggle('hidden', !showAlfavit);
+    topics.classList.add('hidden');
+    quiz.classList.add('hidden');
+    rules.classList.remove('hidden');
+  }
+
+  alfavitImg.addEventListener('click', function () {
+    lightbox.classList.remove('hidden');
+  });
+  lightbox.addEventListener('click', function () {
+    lightbox.classList.add('hidden');
+  });
+
+  rulesStart.addEventListener('click', function () {
+    lightbox.classList.add('hidden');
+    rules.classList.add('hidden');
+    openQuiz(lastTopic);
+  });
+  rulesBack.addEventListener('click', function () {
+    lightbox.classList.add('hidden');
+    rules.classList.add('hidden');
+    topics.classList.remove('hidden');
+    if (!mutedByUser) startMusic();
+  });
+
+  /* ---------- ПРОВЕРКА УНИКАЛЬНОСТИ ПО ВОПРОСУ И ОТВЕТУ ---------- */
+  function uniqByQA(pool) {
+    var seen = {};
+    return pool.filter(function (it) {
+      var k = it.q + '|' + it.a[it.c];
+      if (seen[k]) return false;
+      seen[k] = 1;
+      return true;
+    });
+  }
+/* ---------- ТРЕНАЖЁР ---------- */
+  var GAME = [], qNum = 0, qScore = 0;
+  var GAME_SIZE = 10;
+
+  function uniqByQ(pool) {
+    var seen = {};
+    return pool.filter(function (it) {
+      if (seen[it.q]) return false;
+      seen[it.q] = 1;
+      return true;
+    });
+  }
+
+  function openQuiz(topic) {
+    music.pause();
+    lastTopic = topic;
+    GAME = uniqByQA(topic.pool()).slice(0, GAME_SIZE);
+    qNum = 0;
+    qScore = 0;
+    subjects.classList.add('hidden');
+    quarters.classList.add('hidden');
+    placeholder.classList.add('hidden');
+    rules.classList.add('hidden');
+    lightbox.classList.add('hidden');
+    quiz.classList.remove('hidden');
+    showQuestion();
+  }
+
+  function showQuestion() {
+    var item = GAME[qNum];
+    quizProgress.textContent = 'Вопрос ' + (qNum + 1) + ' из ' + GAME.length + ' · Верно: ' + qScore;
+    quizQuestion.textContent = item.q;
+    quizFeedback.textContent = '';
+    quizResult.style.display = 'none';
+    quizAgain.classList.add('hidden');
+    nextBtn.classList.add('hidden');
+    helpBtn.classList.remove('hidden');
+    nextBtn.textContent = (qNum + 1 === GAME.length) ? '🏁 Результат' : 'Дальше →';
+    quizAnswers.style.display = 'grid';
+    quizAnswers.innerHTML = '';
+    item.a.forEach(function (txt, idx) {
+      var b = document.createElement('button');
+      b.className = 'ans-btn';
+      b.textContent = txt;
+      b.addEventListener('click', function () { answer(idx, b); });
+      quizAnswers.appendChild(b);
+    });
+  }
+
+  function answer(idx, btn) {
+    var item = GAME[qNum];
+    var btns = quizAnswers.querySelectorAll('.ans-btn');
+    btns.forEach(function (b) { b.disabled = true; });
+    helpBtn.classList.add('hidden');
+    if (idx === item.c) {
+      btn.classList.add('good');
+      qScore++;
+      if (!mutedByUser) { p_otvet.currentTime = 0; p_otvet.play().catch(function () {}); }
+      quizFeedback.innerHTML = '✅ Правильно, ' + (studentName || 'дружок') + '!' +
+        (item.t ? '<span class="tip">💡 Как понять: ' + item.t + '</span>' : '');
+    } else {
+      btn.classList.add('bad');
+      btns[item.c].classList.add('good');
+      if (!mutedByUser) { odhibka.currentTime = 0; odhibka.play().catch(function () {}); }
+      quizFeedback.innerHTML = '❌ Правильный ответ: ' + item.a[item.c] +
+        (item.t ? '<span class="tip">💡 Как понять: ' + item.t + '</span>' : '');
+    }
+    btns.forEach(function (b, i) { if (i !== idx && i !== item.c) b.classList.add('dim'); });
+    nextBtn.classList.remove('hidden');
+    nextBtn.focus();
+  }
+
+  function goNext() {
+    nextBtn.classList.add('hidden');
+    helpBtn.classList.add('hidden');
+    qNum++;
+    if (qNum < GAME.length) {
+      showQuestion();
+    } else {
+      showResult();
+    }
+  }
+  nextBtn.addEventListener('click', goNext);
+
+  function showResult() {
+    quizProgress.textContent = 'Готово!';
+    quizQuestion.textContent = '🏁 Тренажёр пройден!';
+    quizAnswers.style.display = 'none';
+    var stars = qScore >= 9 ? '🌟🌟🌟' : (qScore >= 7 ? '🌟🌟' : (qScore >= 5 ? '🌟' : '💪'));
+    quizResult.textContent = 'Правильных ответов: ' + qScore + ' из ' + GAME.length + ' ' + stars;
+    quizResult.style.display = 'block';
+    quizFeedback.innerHTML = (studentName && qScore >= 5) ? 'Молодец, ' + studentName + '!' : '';
+    nextBtn.classList.add('hidden');
+    helpBtn.classList.add('hidden');
+    quizAgain.classList.remove('hidden');
+    if (qScore === GAME.length) {
+      if (!mutedByUser) { pobeda.currentTime = 0; pobeda.play().catch(function () {}); }
+      startFireworks();
+    } else if (qScore < 4) {
+      if (!mutedByUser) { neud.currentTime = 0; neud.play().catch(function () {}); }
+      stopFireworks();
+    } else {
+      stopFireworks();
+    }
+  }
+
+  quizAgain.addEventListener('click', function () { stopFireworks(); openQuiz(lastTopic); });
+
+  quizExit.addEventListener('click', function () {
+    stopFireworks();
+    quiz.classList.add('hidden');
+    topics.classList.remove('hidden');
+    if (!mutedByUser) startMusic();
+  });
+
+  /* ---------- САЛЮТ (ровно 6 секунд) ---------- */
+  var fwCanvas = null, fwTimer = null, fwStopTimer = null, fwAnim = null;
+
+  function startFireworks() {
+    if (fwCanvas) stopFireworks();
+    fwCanvas = document.createElement('canvas');
+    fwCanvas.style.cssText = 'position:fixed;inset:0;z-index:55;pointer-events:none;';
+    document.body.appendChild(fwCanvas);
+    var ctx = fwCanvas.getContext('2d');
+    fwCanvas.width = window.innerWidth;
+    fwCanvas.height = window.innerHeight;
+    var sparks = [];
+    var COLORS = ['#ffd54f','#ff8f00','#ff5252','#69f0ae','#40c4ff','#e040fb','#fff176','#ff4081','#76ff03'];
+    var t0 = Date.now();
+
+    function burst(x, y) {
+      var col = COLORS[Math.floor(Math.random() * COLORS.length)];
+      var n = 80 + Math.floor(Math.random() * 60);
+      for (var i = 0; i < n; i++) {
+        var a = Math.random() * Math.PI * 2;
+        var sp = 2 + Math.random() * 5.5;
+        sparks.push({ x: x, y: y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+          life: 1, col: col, r: 1.4 + Math.random() * 1.8 });
+      }
+      for (var j = 0; j < 8; j++) { // белые «прожилки»
+        var a2 = Math.random() * Math.PI * 2, sp2 = 4 + Math.random() * 5;
+        sparks.push({ x: x, y: y, vx: Math.cos(a2) * sp2, vy: Math.sin(a2) * sp2,
+          life: 1, col: '#ffffff', r: 1.2 });
+      }
+    }
+
+    function loop() {
+      ctx.clearRect(0, 0, fwCanvas.width, fwCanvas.height);
+      sparks = sparks.filter(function (p) { return p.life > 0; });
+      for (var i = 0; i < sparks.length; i++) {
+        var p = sparks[i];
+        p.x += p.vx; p.y += p.vy; p.vy += 0.045; p.life -= 0.016;
+        ctx.globalAlpha = Math.max(p.life, 0);
+        ctx.fillStyle = p.col;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      fwAnim = requestAnimationFrame(loop);
+    }
+
+    burst(fwCanvas.width * 0.5, fwCanvas.height * 0.3);
+    for (var i = 0; i < 6; i++) {
+      burst(Math.random() * fwCanvas.width, Math.random() * fwCanvas.height * 0.6);
+    }
+    fwTimer = setInterval(function () {
+      for (var i = 0; i < 4; i++) {
+        burst(Math.random() * fwCanvas.width, Math.random() * fwCanvas.height * 0.7);
+      }
+    }, 230);
+    fwAnim = requestAnimationFrame(loop);
+
+    // САЛЮТ РОВНО 6 СЕКУНД — главный таймер
+    fwStopTimer = setTimeout(stopFireworks, 6000);
+  }
+
+  function stopFireworks() {
+    clearInterval(fwTimer);
+    clearTimeout(fwStopTimer);
+    if (fwAnim) { cancelAnimationFrame(fwAnim); fwAnim = null; }
+    if (fwCanvas) { fwCanvas.remove(); fwCanvas = null; }
+  }
+
+  /* ---------- Назад ---------- */
+  backBtns.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      if (!subjects.classList.contains('hidden')) {
+        subjects.classList.add('hidden');
+        hall.classList.remove('hidden');
+        layoutZones();
+        setTrack(DEFAULT_TRACK);
+        if (!mutedByUser) startMusic();
+      } else {
+        quarters.classList.add('hidden');
+        subjects.classList.remove('hidden');
+      }
+    });
+  });
+  backBtn2.addEventListener('click', function () {
+    placeholder.classList.add('hidden');
+    quarters.classList.remove('hidden');
+  });
+  /* === ПАТЧ: 8 тем русского, 1 четверть 7 класса === */
+
+})();
+</script>
+
+
+
+
+<style>
+/* Тихий футер: еле заметная строка внизу экрана, не мешает нажатиям */
+#site-footer { position:fixed; left:0; right:0; bottom:0; z-index:60;
+  height:22px; line-height:22px; text-align:center; font-size:12px; font-weight:bold;
+  background:#000; color:#fff; pointer-events:none; user-select:none; }
+</style>
+
+<div id="site-footer">&copy; 2026 Тренажёр по школьным предметам. Все права защищены.</div>
+
+</body>
+</html>
